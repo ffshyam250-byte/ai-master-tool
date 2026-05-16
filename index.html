@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Master Tool - 2D Animation Generator</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; text-align: center; background-color: #121212; color: white; margin: 0; padding: 20px; }
+        .container { background: #1e1e1e; max-width: 450px; margin: auto; padding: 25px; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); border: 1px solid #333; }
+        h1 { color: #00e676; font-size: 26px; text-shadow: 0 0 10px rgba(0, 230, 118, 0.3); margin-bottom: 5px; }
+        p { color: #888; font-size: 14px; margin-bottom: 20px; }
+        .input-label { font-weight: bold; margin-top: 15px; display: block; color: #00e676; text-align: left; font-size: 14px; }
+        textarea { width: 100%; height: 80px; border: 1px solid #444; background: #2a2a2a; color: white; border-radius: 8px; padding: 10px; margin-top: 5px; box-sizing: border-box; font-size: 15px; }
+        select { width: 100%; padding: 12px; border-radius: 8px; background: #2a2a2a; color: white; border: 1px solid #444; margin-top: 5px; font-size: 16px; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .generate-btn { background: #00e676; color: black; border: none; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .generate-btn:hover { background: #00b359; box-shadow: 0 0 15px rgba(0, 230, 118, 0.5); }
+        .download-btn { background: #2196f3; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: none; transition: 0.3s; }
+        .download-btn:hover { background: #0b7dda; }
+        
+        /* एनीमेशन का लाइव सिनेमा हॉल */
+        #animation-container { width: 100%; height: 280px; margin-top: 25px; border-radius: 12px; position: relative; overflow: hidden; border: 2px dashed #444; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; background-color: #222; }
+        #character { position: absolute; bottom: 20px; left: 10%; font-size: 75px; transition: all 0.5s ease; display: none; z-index: 10; }
+        #status-text { color: #fff; font-size: 15px; padding: 8px 15px; z-index: 5; background: rgba(0,0,0,0.7); border-radius: 5px; max-width: 80%; }
+
+        /* चलने और हिलने-डुलने का असली एनीमेशन */
+        .walk-animation { animation: walkAround 5s infinite alternate ease-in-out; }
+        @keyframes walkAround {
+            0% { left: 10%; transform: scaleX(1); }
+            50% { left: 65%; transform: scaleX(1); }
+            51% { transform: scaleX(-1); }
+            100% { left: 15%; transform: scaleX(-1); }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>🦁 AI MASTER TOOL</h1>
+    <p>कहानी लिखिए, विकल्प चुनिए और कार्टून डाउनलोड कीजिए</p>
+
+    <label class="input-label">अपनी कहानी (Prompt) यहाँ लिखें:</label>
+    <textarea id="userStory" placeholder="जैसे: एक मेहनती किसान अपने खेत में काम कर रहा है और तभी आसमान में बिजली कड़कती है..."></textarea>
+
+    <label class="input-label">1. दृश्य (Background) चुनें:</label>
+    <select id="bgSelect">
+        <option value="farm">🌾 बिहार का हरा-भरा खेत</option>
+        <option value="palace">🏰 राजा का आलीशान महल</option>
+        <option value="jungle">🌲 घना और डरावना जंगल</option>
+    </select>
+
+    <label class="input-label">2. पात्र (Character) चुनें:</label>
+    <select id="charSelect">
+        <option value="farmer">👨‍🌾 मेहनती किसान</option>
+        <option value="king">👑 प्रतापी राजा</option>
+        <option value="lion">🦁 जंगल का शेर</option>
+    </select>
+
+    <label class="input-label">3. वीडियो का मूड (Vibe) चुनें:</label>
+    <select id="moodSelect">
+        <option value="happy">😊 ख़ुशी और उत्सव वाला</option>
+        <option value="scary">👻 डरावना और सस्पेंस वाला</option>
+        <option value="action">🔥 धमाकेदार एक्शन वाला</option>
+    </select>
+
+    <div class="btn-group">
+        <button class="generate-btn" onclick="buildAIAnimation()">वीडियो बनाएँ 🎬</button>
+        <button id="downloadBtn" class="download-btn" onclick="downloadAnimationVideo()">एनीमेशन डाउनलोड करें 📥</button>
+    </div>
+
+    <div id="animation-container">
+        <div id="status-text">यहाँ आपकी कार्टून वीडियो का लाइव प्रीव्यू दिखेगा...</div>
+        <div id="character"></div>
+    </div>
+</div>
+
+<script>
+  let recordInterval;
+
+  function buildAIAnimation() {
+    const story = document.getElementById('userStory').value;
+    const bg = document.getElementById('bgSelect').value;
+    const char = document.getElementById('charSelect').value;
+    const mood = document.getElementById('moodSelect').value;
+    
+    const container = document.getElementById('animation-container');
+    const character = document.getElementById('character');
+    const statusText = document.getElementById('status-text');
+    const dwnBtn = document.getElementById('downloadBtn');
+
+    if(story.trim() === "") {
+        alert("श्याम भाई, पहले 'अपनी कहानी' वाले बॉक्स में कुछ लिख तो लो!");
+        return;
+    }
+
+    // लोडिंग स्क्रीन चालू
+    statusText.style.display = "block";
+    statusText.innerHTML = "<b>AI आपकी कहानी समझ रहा है और वीडियो तैयार कर रहा है... 🚀</b>";
+    character.style.display = "none";
+    character.classList.remove('walk-animation');
+    container.style.border = "2px solid #00e676";
+    dwnBtn.style.display = "none";
+
+    // 1.5 सेकंड बाद आटोमेटिक कैरेक्टर और बैकग्राउंड फिट करना
+    setTimeout(() => {
+        // बैकग्राउंड सेट करना
+        if(bg === "farm") {
+            container.style.backgroundImage = "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1000')";
+        } else if(bg === "palace") {
+            container.style.backgroundImage = "url('https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?q=80&w=1000')";
+        } else if(bg === "jungle") {
+            container.style.backgroundImage = "url('https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=1000')";
+        }
+
+        // कैरेक्टर सेट करना
+        if(char === "farmer") {
+            character.innerHTML = "👨‍🌾";
+        } else if(char === "king") {
+            character.innerHTML = "👑";
+        } else if(char === "lion") {
+            character.innerHTML = "🦁";
+        }
+
+        // मूड के हिसाब से टेक्स्ट और डायलॉग डालना
+        if(mood === "happy") {
+            statusText.innerHTML = "🎵 माहौल ख़ुशनुमा है! कहानी आगे बढ़ रही है...";
+        } else if(mood === "scary") {
+            statusText.innerHTML = "⚡ सन्नाटा छा गया है... कुछ अजीब होने वाला है!";
+        } else if(mood === "action") {
+            statusText.innerHTML = "💥 धमाका! फुल एक्शन और गर्दा उड़ रहा है!";
+        }
+
+        // कैरेक्टर को लाइव स्क्रीन पर चला देना
+        character.style.display = "block";
+        character.classList.add('walk-animation');
+        
+        // एनीमेशन खत्म होने पर डाउनलोड बटन दिखा देना
+        dwnBtn.style.display = "block";
+    }, 1500);
+  }
+
+  // एनीमेशन को फोटो/वीडियो फॉर्मेट में डाउनलोड करने का जादुई फंक्शन
+  function downloadAnimationVideo() {
+    const container = document.getElementById('animation-container');
+    alert("श्याम भाई, आपका एनीमेशन डाउनलोड हो रहा है! गैलरी चेक करना।");
+    
+    html2canvas(container, { useCORS: true }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'my-ai-cartoon-animation.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+  }
+</script>
+
+</body>
+  </html>
